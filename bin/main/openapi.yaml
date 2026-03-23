@@ -1,0 +1,1505 @@
+openapi: 3.0.3
+info:
+  title: Project-X Backend API
+  description: |
+    API REST multi-tenant para plataforma de e-commerce SaaS.
+    
+    ## Autenticación
+    - En **desarrollo**: usar `auth.mock=true` y enviar headers `X-Mock-Role`, `X-Mock-Email`, `X-Mock-TenantId`
+    - En **producción**: usar `Authorization: Bearer <JWT>` de AWS Cognito
+    
+    ## Multi-Tenant
+    Todos los endpoints (excepto `/health` y `/webhooks/*`) requieren el header `X-Tenant-Id`.
+    El tenantId también se envía como path parameter en la mayoría de rutas.
+    
+    ## Tenants disponibles (seed)
+    - `idoneo` — Productos naturales y saludables
+    - `chicha` — Accesorios y moda artesanal
+    - `tech` — Tecnología y electrónicos
+  version: 1.0.0
+  contact:
+    name: Project-X Team
+
+servers:
+  - url: http://localhost:7070/api/v1
+    description: Servidor local de desarrollo
+
+tags:
+  - name: Health
+    description: Health check del servicio
+  - name: Tenant
+    description: Configuración de tenant (F002)
+  - name: Products
+    description: Catálogo de productos (F003)
+  - name: Categories
+    description: Categorías de productos (F003)
+  - name: Cart
+    description: Carrito de compras (F004)
+  - name: Orders
+    description: Órdenes y checkout (F005, F008)
+  - name: Wompi
+    description: Integración de pagos Wompi (F006)
+  - name: Manual Payment
+    description: Pago manual y cancelación (F007)
+  - name: Auth
+    description: Autenticación (F011)
+  - name: Storefront
+    description: Homepage / Storefront (F012)
+  - name: Legal
+    description: Contenido legal (F018)
+  - name: Search
+    description: Búsqueda de productos (F022)
+  - name: SEO
+    description: Sitemap y SEO (F016)
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Verifica que el servicio está activo. No requiere autenticación ni X-Tenant-Id.
+      responses:
+        '200':
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2026-03-15T12:00:00Z"
+
+  /tenants/{tenantId}/config:
+    get:
+      tags: [Tenant]
+      summary: Obtener configuración del tenant
+      description: Retorna la configuración pública del tenant (colores, info de contacto, etc.)
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        '200':
+          description: Configuración del tenant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Tenant]
+      summary: Actualizar configuración del tenant
+      description: Requiere rol SUPER_ADMIN o MERCHANT del tenant.
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantRequest'
+      responses:
+        '200':
+          description: Tenant actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tenants/{tenantId}/products:
+    get:
+      tags: [Products]
+      summary: Listar productos
+      description: Lista productos del tenant con filtros opcionales. Público.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filtrar por categoryId
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Búsqueda por nombre
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, OUT_OF_STOCK, DELETED]
+            default: ACTIVE
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista paginada de productos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PageProduct'
+    post:
+      tags: [Products]
+      summary: Crear producto
+      description: Requiere rol SUPER_ADMIN o MERCHANT.
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tenants/{tenantId}/products/{productId}:
+    get:
+      tags: [Products]
+      summary: Obtener detalle de producto
+      description: Público.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle del producto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Products]
+      summary: Actualizar producto
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    delete:
+      tags: [Products]
+      summary: Eliminar producto (soft delete)
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Producto eliminado
+
+  /tenants/{tenantId}/products/search:
+    get:
+      tags: [Search]
+      summary: Buscar productos con filtros avanzados
+      description: Búsqueda con filtros de precio, categoría, y ordenamiento.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Texto de búsqueda
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: integer
+        - name: maxPrice
+          in: query
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [price_asc, price_desc, name_asc, name_desc, newest]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Resultados de búsqueda
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SearchResult'
+
+  /tenants/{tenantId}/categories:
+    get:
+      tags: [Categories]
+      summary: Listar categorías
+      description: Público.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        '200':
+          description: Lista de categorías
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+    post:
+      tags: [Categories]
+      summary: Crear categoría
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Categoría creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Category'
+
+  /tenants/{tenantId}/cart:
+    get:
+      tags: [Cart]
+      summary: Obtener carrito actual
+      description: Usa cookie `sessionId` para identificar la sesión.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        '200':
+          description: Carrito actual
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cart'
+    delete:
+      tags: [Cart]
+      summary: Vaciar carrito
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        '204':
+          description: Carrito vaciado
+
+  /tenants/{tenantId}/cart/items:
+    post:
+      tags: [Cart]
+      summary: Agregar producto al carrito
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToCartRequest'
+      responses:
+        '201':
+          description: Producto agregado al carrito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cart'
+
+  /tenants/{tenantId}/cart/items/{productId}:
+    put:
+      tags: [Cart]
+      summary: Actualizar cantidad de item en carrito
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Carrito actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cart'
+    delete:
+      tags: [Cart]
+      summary: Eliminar item del carrito
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item eliminado, carrito actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cart'
+
+  /tenants/{tenantId}/orders:
+    post:
+      tags: [Orders]
+      summary: Crear orden desde carrito
+      description: Requiere cookie `sessionId` con un carrito existente.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Orden creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [Orders]
+      summary: Listar órdenes del tenant (admin)
+      description: Requiere autenticación. Paginado con filtros opcionales.
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: orderStatus
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, PREPARING, SHIPPED, DELIVERED, CANCELLED]
+        - name: paymentStatus
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, DECLINED, VOIDED, ERROR]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista paginada de órdenes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  meta:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      size:
+                        type: integer
+                      total:
+                        type: integer
+
+  /tenants/{tenantId}/orders/{orderCode}:
+    get:
+      tags: [Orders]
+      summary: Obtener orden por código
+      description: Público. Usado para tracking de orden.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: orderCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle de la orden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tenants/{tenantId}/orders/{orderCode}/status:
+    put:
+      tags: [Orders]
+      summary: Actualizar estado de orden
+      description: Requiere autenticación (admin).
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: orderCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [PENDING, CONFIRMED, PREPARING, SHIPPED, DELIVERED, CANCELLED]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Orden actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /tenants/{tenantId}/orders/{orderCode}/confirm-payment:
+    put:
+      tags: [Manual Payment]
+      summary: Confirmar pago manual
+      description: El comerciante confirma que recibió el pago por transferencia/efectivo.
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: orderCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Pago confirmado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /tenants/{tenantId}/orders/{orderCode}/cancel:
+    put:
+      tags: [Manual Payment]
+      summary: Cancelar orden
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: orderCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Orden cancelada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /tenants/{tenantId}/payments/wompi/init:
+    post:
+      tags: [Wompi]
+      summary: Iniciar pago con Wompi
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderCode]
+              properties:
+                orderCode:
+                  type: string
+                redirectUrl:
+                  type: string
+      responses:
+        '200':
+          description: Datos de inicialización de pago Wompi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentInitData'
+
+  /tenants/{tenantId}/orders/{orderCode}/payment-status:
+    get:
+      tags: [Wompi]
+      summary: Consultar estado de pago
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: orderCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Estado del pago
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentStatusResponse'
+
+  /webhooks/wompi:
+    post:
+      tags: [Wompi]
+      summary: Webhook de Wompi
+      description: Endpoint que Wompi invoca cuando cambia el estado de una transacción. No requiere X-Tenant-Id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                signature:
+                  type: object
+                  properties:
+                    checksum:
+                      type: string
+                timestamp:
+                  type: integer
+                data:
+                  type: object
+                  properties:
+                    transaction:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        status:
+                          type: string
+                        reference:
+                          type: string
+                        amount_in_cents:
+                          type: integer
+      responses:
+        '200':
+          description: Webhook procesado
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (placeholder)
+      description: "**NOT IMPLEMENTED** — Login se maneja directamente con Cognito Hosted UI."
+      responses:
+        '501':
+          description: Not Implemented
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh token (placeholder)
+      description: "**NOT IMPLEMENTED** — Refresh se maneja directamente con Cognito."
+      responses:
+        '501':
+          description: Not Implemented
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Obtener usuario autenticado
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      responses:
+        '200':
+          description: Datos del usuario
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      sub:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                      tenantId:
+                        type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tenants/{tenantId}/storefront:
+    get:
+      tags: [Storefront]
+      summary: Obtener data de homepage
+      description: Retorna toda la data necesaria para renderizar la homepage en un solo request.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        '200':
+          description: Data del storefront
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontData'
+
+  /tenants/{tenantId}/legal/{type}:
+    get:
+      tags: [Legal]
+      summary: Obtener contenido legal
+      description: "Tipos válidos: `terms`, `privacy`, `returns`"
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [terms, privacy, returns]
+      responses:
+        '200':
+          description: Contenido legal
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LegalContent'
+    put:
+      tags: [Legal]
+      summary: Actualizar contenido legal
+      security:
+        - BearerAuth: []
+        - MockAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [terms, privacy, returns]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Contenido actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LegalContent'
+
+  /tenants/{tenantId}/sitemap-data:
+    get:
+      tags: [SEO]
+      summary: Obtener datos para generar sitemap
+      parameters:
+        - $ref: '#/components/parameters/TenantIdPath'
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        '200':
+          description: Datos del sitemap
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SitemapData'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT de AWS Cognito (producción)
+    MockAuth:
+      type: apiKey
+      in: header
+      name: X-Mock-Role
+      description: |
+        Mock auth para desarrollo. Headers requeridos:
+        - `X-Mock-Role`: SUPER_ADMIN, MERCHANT, o CUSTOMER
+        - `X-Mock-Email`: email del usuario simulado
+        - `X-Mock-TenantId`: tenantId del usuario simulado
+
+  parameters:
+    TenantIdPath:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: "Identificador del tenant (ej: `idoneo`, `chicha`, `tech`)"
+    TenantIdHeader:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      schema:
+        type: string
+      description: "Header multi-tenant (debe coincidir con el tenantId del path)"
+
+  responses:
+    BadRequest:
+      description: Request inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: No autenticado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: No autorizado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    Tenant:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        bannerUrl:
+          type: string
+        colors:
+          $ref: '#/components/schemas/TenantColors'
+        font:
+          type: string
+        socialMedia:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+        cities:
+          type: array
+          items:
+            type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        schedule:
+          type: string
+        bankInfo:
+          $ref: '#/components/schemas/BankInfo'
+        isActive:
+          type: boolean
+        shippingConfig:
+          $ref: '#/components/schemas/ShippingConfig'
+        manualPaymentDiscount:
+          $ref: '#/components/schemas/ManualPaymentDiscountConfig'
+
+    TenantColors:
+      type: object
+      properties:
+        primary:
+          type: string
+        secondary:
+          type: string
+        accent:
+          type: string
+        background:
+          type: string
+        text:
+          type: string
+
+    SocialLink:
+      type: object
+      properties:
+        platform:
+          type: string
+        url:
+          type: string
+        isActive:
+          type: boolean
+
+    BankInfo:
+      type: object
+      properties:
+        bankName:
+          type: string
+        accountType:
+          type: string
+        accountNumber:
+          type: string
+        accountHolder:
+          type: string
+        documentType:
+          type: string
+        documentNumber:
+          type: string
+
+    ShippingConfig:
+      type: object
+      properties:
+        defaultShippingCost:
+          type: number
+        freeShippingThreshold:
+          type: number
+          nullable: true
+        pickupEnabled:
+          type: boolean
+        pickupDiscountEnabled:
+          type: boolean
+        shippingLabel:
+          type: string
+
+    ManualPaymentDiscountConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        discountPercentage:
+          type: number
+        description:
+          type: string
+        applicablePaymentMethods:
+          type: array
+          items:
+            type: string
+
+    UpdateTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        bannerUrl:
+          type: string
+        colors:
+          $ref: '#/components/schemas/TenantColors'
+        font:
+          type: string
+        socialMedia:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+        cities:
+          type: array
+          items:
+            type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        schedule:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        productId:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        compareAtPrice:
+          type: number
+          nullable: true
+        images:
+          type: array
+          items:
+            type: string
+        categoryId:
+          type: string
+        categoryName:
+          type: string
+        stock:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, OUT_OF_STOCK, DELETED]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required: [name, price, categoryId]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        compareAtPrice:
+          type: number
+        images:
+          type: array
+          items:
+            type: string
+        categoryId:
+          type: string
+        stock:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        compareAtPrice:
+          type: number
+        images:
+          type: array
+          items:
+            type: string
+        categoryId:
+          type: string
+        stock:
+          type: integer
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, OUT_OF_STOCK]
+        tags:
+          type: array
+          items:
+            type: string
+
+    PageProduct:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+
+    SearchResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+        query:
+          type: string
+
+    Category:
+      type: object
+      properties:
+        categoryId:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+
+    Cart:
+      type: object
+      properties:
+        cartId:
+          type: string
+        tenantId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        itemCount:
+          type: integer
+        subtotal:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      properties:
+        productId:
+          type: string
+        productName:
+          type: string
+        price:
+          type: number
+        quantity:
+          type: integer
+        imageUrl:
+          type: string
+
+    AddToCartRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+
+    Order:
+      type: object
+      properties:
+        orderId:
+          type: string
+        tenantId:
+          type: string
+        orderCode:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        shippingAddress:
+          type: string
+        city:
+          type: string
+        notes:
+          type: string
+        subtotal:
+          type: number
+        shippingCost:
+          type: number
+        discount:
+          type: number
+        total:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [WOMPI, BANK_TRANSFER, CASH_ON_DELIVERY]
+        orderStatus:
+          type: string
+          enum: [PENDING, CONFIRMED, PREPARING, SHIPPED, DELIVERED, CANCELLED]
+        paymentStatus:
+          type: string
+          enum: [PENDING, APPROVED, DECLINED, VOIDED, ERROR]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateOrderRequest:
+      type: object
+      required: [customerName, customerEmail, customerPhone, city, paymentMethod]
+      properties:
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+        shippingAddress:
+          type: string
+        city:
+          type: string
+        notes:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [WOMPI, BANK_TRANSFER, CASH_ON_DELIVERY]
+        deliveryMethod:
+          type: string
+          enum: [SHIPPING, PICKUP]
+        hp:
+          type: string
+          description: Honeypot field (anti-bot F019)
+        ft:
+          type: integer
+          description: Form timing in ms (anti-bot F019)
+
+    PaymentInitData:
+      type: object
+      properties:
+        publicKey:
+          type: string
+        amountInCents:
+          type: integer
+        currency:
+          type: string
+        reference:
+          type: string
+        redirectUrl:
+          type: string
+        signatureIntegrity:
+          type: string
+
+    PaymentStatusResponse:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        paymentStatus:
+          type: string
+        orderStatus:
+          type: string
+        transactionId:
+          type: string
+
+    StorefrontData:
+      type: object
+      properties:
+        tenant:
+          $ref: '#/components/schemas/Tenant'
+        featuredProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    LegalContent:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    SitemapData:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              slug:
+                type: string
+              updatedAt:
+                type: string
+                format: date-time
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              categoryId:
+                type: string
+              name:
+                type: string

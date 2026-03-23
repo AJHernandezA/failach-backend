@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:24px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+
+<!-- Header -->
+<tr><td style="background-color:{{primaryColor}};padding:24px;text-align:center;">
+  <img src="{{tenantLogo}}" alt="{{tenantName}}" style="max-height:48px;max-width:200px;" />
+</td></tr>
+
+<!-- Body -->
+<tr><td style="padding:32px 24px;">
+  <h1 style="margin:0 0 8px;font-size:22px;color:#1a1a1a;">Datos para transferencia</h1>
+  <p style="margin:0 0 24px;color:#666;font-size:14px;">Hola {{customerName}}, realiza la transferencia con los siguientes datos:</p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:16px;">
+  <tr><td>
+    <p style="margin:0 0 4px;font-size:12px;color:#888;">Código de orden (usar como referencia)</p>
+    <p style="margin:0;font-size:20px;font-weight:bold;color:{{primaryColor}};">{{orderCode}}</p>
+  </td></tr>
+  </table>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff8e1;border-radius:8px;padding:16px;margin-bottom:24px;border:1px solid #ffe082;">
+  <tr><td>
+    <p style="margin:0 0 4px;font-size:12px;color:#888;">Monto a transferir</p>
+    <p style="margin:0;font-size:24px;font-weight:bold;color:#e65100;">{{total}}</p>
+  </td></tr>
+  </table>
+
+  <h2 style="margin:0 0 12px;font-size:16px;color:#1a1a1a;">Datos bancarios</h2>
+  <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#333;">
+    <tr><td style="padding:6px 0;color:#888;width:40%;">Banco</td><td style="padding:6px 0;font-weight:bold;">{{bankName}}</td></tr>
+    <tr><td style="padding:6px 0;color:#888;">Tipo de cuenta</td><td style="padding:6px 0;font-weight:bold;">{{accountType}}</td></tr>
+    <tr><td style="padding:6px 0;color:#888;">Número de cuenta</td><td style="padding:6px 0;font-weight:bold;">{{accountNumber}}</td></tr>
+    <tr><td style="padding:6px 0;color:#888;">Titular</td><td style="padding:6px 0;font-weight:bold;">{{accountHolder}}</td></tr>
+    <tr><td style="padding:6px 0;color:#888;">{{documentType}}</td><td style="padding:6px 0;font-weight:bold;">{{documentNumber}}</td></tr>
+  </table>
+
+  <p style="margin:24px 0 0;padding:12px;background-color:#e3f2fd;border-radius:8px;font-size:13px;color:#1565c0;">
+    <strong>Importante:</strong> Usa el código <strong>{{orderCode}}</strong> como referencia de la transferencia. Luego envía el comprobante por WhatsApp.
+  </p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+  <tr><td align="center">
+    <a href="{{whatsappUrl}}" style="display:inline-block;background-color:#25D366;color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;">Enviar comprobante por WhatsApp</a>
+  </td></tr>
+  </table>
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="padding:24px;text-align:center;border-top:1px solid #eee;">
+  <p style="margin:0;font-size:12px;color:#999;">Este email fue enviado por {{tenantName}}.</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

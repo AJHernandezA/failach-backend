@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:24px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%;">
+
+<!-- Header -->
+<tr><td style="background-color:{{primaryColor}};padding:24px;text-align:center;">
+  <img src="{{tenantLogo}}" alt="{{tenantName}}" style="max-height:48px;max-width:200px;" />
+</td></tr>
+
+<!-- Body -->
+<tr><td style="padding:32px 24px;">
+  <h1 style="margin:0 0 8px;font-size:22px;color:#1a1a1a;">¡Pedido recibido!</h1>
+  <p style="margin:0 0 24px;color:#666;font-size:14px;">Hola {{customerName}}, tu pedido ha sido registrado exitosamente.</p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:24px;">
+  <tr><td>
+    <p style="margin:0 0 4px;font-size:12px;color:#888;">Código de orden</p>
+    <p style="margin:0;font-size:20px;font-weight:bold;color:{{primaryColor}};">{{orderCode}}</p>
+  </td></tr>
+  </table>
+
+  <h2 style="margin:0 0 12px;font-size:16px;color:#1a1a1a;">Resumen del pedido</h2>
+  <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;color:#333;">
+    <tr style="border-bottom:2px solid #eee;">
+      <th style="padding:8px 0;text-align:left;font-size:12px;color:#888;">Producto</th>
+      <th style="padding:8px 0;text-align:center;font-size:12px;color:#888;">Cant.</th>
+      <th style="padding:8px 0;text-align:right;font-size:12px;color:#888;">Precio</th>
+    </tr>
+    {{items}}
+  </table>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-top:16px;">
+    <tr><td style="padding:4px 0;color:#888;">Subtotal</td><td style="padding:4px 0;text-align:right;">{{subtotal}}</td></tr>
+    <tr><td style="padding:4px 0;color:#888;">Envío</td><td style="padding:4px 0;text-align:right;">{{shippingCost}}</td></tr>
+    <tr><td style="padding:8px 0;font-weight:bold;font-size:16px;border-top:2px solid #eee;">Total</td><td style="padding:8px 0;text-align:right;font-weight:bold;font-size:16px;color:{{primaryColor}};border-top:2px solid #eee;">{{total}}</td></tr>
+  </table>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+  <tr><td align="center">
+    <a href="{{trackingUrl}}" style="display:inline-block;background-color:{{primaryColor}};color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;">Ver estado del pedido</a>
+  </td></tr>
+  </table>
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="padding:24px;text-align:center;border-top:1px solid #eee;">
+  <p style="margin:0;font-size:12px;color:#999;">Este email fue enviado por {{tenantName}}.</p>
+  <p style="margin:4px 0 0;font-size:12px;color:#999;">Si tienes preguntas, contáctanos por <a href="{{whatsappUrl}}" style="color:{{primaryColor}};">WhatsApp</a>.</p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>
