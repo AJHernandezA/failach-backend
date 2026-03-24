@@ -3,6 +3,7 @@ package com.projectx.backend.infra.adapters.in.controller;
 import com.google.inject.Inject;
 import com.projectx.backend.domain.constants.ApiConstants;
 import com.projectx.backend.domain.models.AuthenticatedUser;
+import com.projectx.backend.domain.ports.out.AdminNotificationService;
 import com.projectx.backend.domain.ports.out.AuthService;
 import com.projectx.backend.infra.middleware.RoleEnforcer;
 import io.javalin.Javalin;
@@ -22,10 +23,12 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthService authService;
+    private final AdminNotificationService adminNotificationService;
 
     @Inject
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AdminNotificationService adminNotificationService) {
         this.authService = authService;
+        this.adminNotificationService = adminNotificationService;
     }
 
     /**
@@ -52,6 +55,14 @@ public class AuthController {
                     body.phone(), tenantSlug, "MERCHANT");
 
             log.info("Nuevo vendedor registrado: {} / {} (tenant: {})", body.username(), body.email(), tenantSlug);
+
+            // F045: Notificar al admin sobre nuevo registro
+            try {
+                adminNotificationService.notifyAccountCreated(body.email(), body.name(), tenantSlug);
+            } catch (Exception e) {
+                log.warn("Error al notificar al admin sobre nuevo registro: {}", e.getMessage());
+            }
+
             ctx.status(201).json(Map.of("data", Map.of(
                     "message", "Registro exitoso. Revisa tu email para confirmar tu cuenta.",
                     "email", body.email(),

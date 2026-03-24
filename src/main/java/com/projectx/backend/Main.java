@@ -16,6 +16,7 @@ import com.projectx.backend.infra.adapters.in.controller.SearchController;
 import com.projectx.backend.infra.adapters.in.controller.SitemapController;
 import com.projectx.backend.infra.adapters.in.controller.AdminDashboardController;
 import com.projectx.backend.infra.adapters.in.controller.AdminOrderController;
+import com.projectx.backend.infra.adapters.in.controller.AdminPaymentLinkController;
 import com.projectx.backend.infra.adapters.in.controller.AdminProductController;
 import com.projectx.backend.infra.adapters.in.controller.PlatformController;
 import com.projectx.backend.infra.adapters.in.controller.StorefrontController;
@@ -53,6 +54,9 @@ public class Main {
     public static void main(String[] args) {
         // Cargar configuración
         AppConfig appConfig = new AppConfig();
+
+        // Validar secretos de producción (fail-fast si faltan variables de entorno)
+        appConfig.validateProductionSecrets();
 
         // Configurar Guice (inyección de dependencias)
         Injector injector = Guice.createInjector(
@@ -190,6 +194,7 @@ public class Main {
         injector.getInstance(AdminProductController.class).register(app);
         injector.getInstance(AdminOrderController.class).register(app);
         injector.getInstance(AdminDashboardController.class).register(app);
+        injector.getInstance(AdminPaymentLinkController.class).register(app);
         injector.getInstance(PlatformController.class).register(app);
         SwaggerController.register(app);
 

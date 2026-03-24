@@ -5,14 +5,18 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.projectx.backend.domain.ports.out.CartRepository;
 import com.projectx.backend.domain.ports.out.CategoryRepository;
+import com.projectx.backend.domain.ports.out.AdminNotificationService;
 import com.projectx.backend.domain.ports.out.EmailService;
 import com.projectx.backend.domain.ports.out.LegalContentRepository;
 import com.projectx.backend.domain.ports.out.OrderRepository;
 import com.projectx.backend.domain.ports.out.PaymentService;
 import com.projectx.backend.domain.ports.out.ProductRepository;
 import com.projectx.backend.domain.ports.out.TenantRepository;
+import com.projectx.backend.infra.adapters.out.email.LogAdminNotificationService;
 import com.projectx.backend.infra.adapters.out.email.LogEmailService;
+import com.projectx.backend.infra.adapters.out.email.SesAdminNotificationService;
 import com.projectx.backend.infra.adapters.out.email.SesEmailService;
+import com.projectx.backend.infra.adapters.out.payment.MockWompiPaymentService;
 import com.projectx.backend.infra.adapters.out.payment.WompiPaymentService;
 import com.projectx.backend.infra.adapters.out.persistence.*;
 import software.amazon.awssdk.regions.Region;
@@ -60,8 +64,12 @@ public class InfraModule extends AbstractModule {
         // F005: Order Repository
         bind(OrderRepository.class).to(InMemoryOrderRepository.class).in(Singleton.class);
 
-        // F006: Wompi Payment Service
-        bind(PaymentService.class).to(WompiPaymentService.class).in(Singleton.class);
+        // F006: Wompi Payment Service — Mock en desarrollo, real en producción
+        if (appConfig.isAuthMockEnabled()) {
+            bind(PaymentService.class).to(MockWompiPaymentService.class).in(Singleton.class);
+        } else {
+            bind(PaymentService.class).to(WompiPaymentService.class).in(Singleton.class);
+        }
 
         // F009: Email Service — LogEmailService en desarrollo, SesEmailService con SES
         // habilitado
@@ -69,6 +77,13 @@ public class InfraModule extends AbstractModule {
             bind(EmailService.class).to(SesEmailService.class).in(Singleton.class);
         } else {
             bind(EmailService.class).to(LogEmailService.class).in(Singleton.class);
+        }
+
+        // F045: Admin Notification Service — Log en desarrollo, SES en producción
+        if (appConfig.isEmailEnabled()) {
+            bind(AdminNotificationService.class).to(SesAdminNotificationService.class).in(Singleton.class);
+        } else {
+            bind(AdminNotificationService.class).to(LogAdminNotificationService.class).in(Singleton.class);
         }
 
         // F018: Legal Content Repository — InMemory en desarrollo, DynamoDB en

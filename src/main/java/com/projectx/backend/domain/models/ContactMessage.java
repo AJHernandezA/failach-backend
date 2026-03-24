@@ -7,11 +7,12 @@ import java.time.Instant;
  * Se almacena en DynamoDB para revisión posterior.
  */
 public record ContactMessage(
-        String id,
-        String name,
-        String email,
-        String phone,
-        String message,
-        String ip,
-        Instant createdAt
-) {}
+                String id,
+                String name,
+                String email,
+                String phone,
+                String subject,
+                String message,
+                String ip,
+                Instant createdAt) {
+}

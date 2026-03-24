@@ -18,7 +18,8 @@ import java.util.Map;
 
 /**
  * Controller para los endpoints públicos de la plataforma.
- * Sirve la landing page con estadísticas, lista de tiendas y formulario de contacto.
+ * Sirve la landing page con estadísticas, lista de tiendas y formulario de
+ * contacto.
  * Estos endpoints NO requieren autenticación ni X-Tenant-Id.
  */
 public class PlatformController {
@@ -84,7 +85,8 @@ public class PlatformController {
 
     /**
      * GET /api/v1/platform/stores/:tenantId
-     * Perfil público de una tienda. Reutiliza ListPublicStores y filtra por tenantId.
+     * Perfil público de una tienda. Reutiliza ListPublicStores y filtra por
+     * tenantId.
      */
     private void handleGetStoreProfile(Context ctx) {
         String tenantId = ctx.pathParam("tenantId");
@@ -112,8 +114,7 @@ public class PlatformController {
         String ip = ctx.ip();
 
         ContactMessage message = sendContactMessage.execute(
-                body.name(), body.email(), body.phone(), body.message(), ip
-        );
+                body.name(), body.email(), body.phone(), body.subject(), body.message(), ip);
 
         ctx.status(201).json(Map.of("data", Map.of("id", message.id(), "message", "Mensaje enviado exitosamente")));
     }
@@ -121,5 +122,6 @@ public class PlatformController {
     /**
      * DTO para el request del formulario de contacto.
      */
-    private record ContactRequest(String name, String email, String phone, String message) {}
+    private record ContactRequest(String name, String email, String phone, String subject, String message) {
+    }
 }

@@ -7,5 +7,5 @@ import com.projectx.backend.domain.models.ContactMessage;
  * enviados desde el formulario de la landing page.
  */
 public interface SendContactMessageUseCase {
-    ContactMessage execute(String name, String email, String phone, String message, String ip);
+    ContactMessage execute(String name, String email, String phone, String subject, String message, String ip);
 }

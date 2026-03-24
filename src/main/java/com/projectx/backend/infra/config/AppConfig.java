@@ -11,8 +11,10 @@ import java.util.Properties;
 
 /**
  * Configuración de la aplicación.
- * Lee valores de application.properties y permite sobrescribirlos con variables de entorno.
- * Patrón: primero busca variable de entorno, si no existe usa el valor de properties.
+ * Lee valores de application.properties y permite sobrescribirlos con variables
+ * de entorno.
+ * Patrón: primero busca variable de entorno, si no existe usa el valor de
+ * properties.
  */
 public class AppConfig {
 
@@ -113,5 +115,65 @@ public class AppConfig {
     /** Si el envío de emails está habilitado (requiere SES configurado) */
     public boolean isEmailEnabled() {
         return Boolean.parseBoolean(get("email.enabled", "false"));
+    }
+
+    /** Llave pública de Wompi */
+    public String getWompiPublicKey() {
+        return get("wompi.publicKey", "");
+    }
+
+    /** Secreto de integridad de Wompi */
+    public String getWompiIntegritySecret() {
+        return get("wompi.integritySecret", "");
+    }
+
+    /** Secreto de eventos (webhooks) de Wompi */
+    public String getWompiEventsSecret() {
+        return get("wompi.eventsSecret", "");
+    }
+
+    /** Llave privada de Wompi (para crear links de pago) */
+    public String getWompiPrivateKey() {
+        return get("wompi.privateKey", "");
+    }
+
+    /** URL base del API de Wompi */
+    public String getWompiApiBaseUrl() {
+        return get("wompi.apiBaseUrl", "https://sandbox.wompi.co/v1");
+    }
+
+    /**
+     * Valida que todas las variables de entorno requeridas para producción estén
+     * configuradas.
+     * Lanza IllegalStateException si falta alguna (fail-fast como Tiquetera).
+     * Solo aplica cuando auth.mock=false (producción).
+     */
+    public void validateProductionSecrets() {
+        if (isAuthMockEnabled()) {
+            log.info("[CONFIG] Modo desarrollo (auth.mock=true). No se validan secretos de producción.");
+            return;
+        }
+
+        log.info("[CONFIG] Modo producción. Validando variables de entorno requeridas...");
+
+        requireEnv("WOMPI_PUBLICKEY", getWompiPublicKey(), "Llave pública de Wompi");
+        requireEnv("WOMPI_PRIVATEKEY", getWompiPrivateKey(), "Llave privada de Wompi");
+        requireEnv("WOMPI_INTEGRITYSECRET", getWompiIntegritySecret(), "Secreto de integridad de Wompi");
+        requireEnv("WOMPI_EVENTSSECRET", getWompiEventsSecret(), "Secreto de eventos/webhooks de Wompi");
+        requireEnv("COGNITO_USERPOOLID", getCognitoUserPoolId(), "Cognito User Pool ID");
+
+        log.info("[CONFIG] Todas las variables de entorno requeridas están configuradas.");
+    }
+
+    /**
+     * Valida que un valor de configuración no esté vacío.
+     * Lanza IllegalStateException si falta (patrón fail-fast de Tiquetera).
+     */
+    private void requireEnv(String envName, String value, String description) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    String.format("Variable de entorno %s (%s) no está configurada. "
+                            + "Configúrala en las variables de entorno del servidor.", envName, description));
+        }
     }
 }

@@ -2,6 +2,9 @@ package com.projectx.backend.domain.ports.out;
 
 import com.projectx.backend.domain.models.Order;
 import com.projectx.backend.domain.models.PaymentInitData;
+import com.projectx.backend.domain.models.PaymentLink;
+
+import java.util.List;
 
 /**
  * Puerto de salida para la integración con la pasarela de pagos (Wompi).
@@ -22,4 +25,20 @@ public interface PaymentService {
      * Calcula la firma de integridad para una referencia de pago.
      */
     String calculateIntegritySignature(String reference, long amountInCents, String currency);
+
+    /**
+     * Crea un link de pago en Wompi.
+     */
+    PaymentLink createPaymentLink(String name, String description, boolean singleUse,
+            Long amountInCents, String imageUrl, String redirectUrl);
+
+    /**
+     * Lista los links de pago creados.
+     */
+    List<PaymentLink> listPaymentLinks();
+
+    /**
+     * Obtiene un link de pago por ID.
+     */
+    PaymentLink getPaymentLink(String linkId);
 }
