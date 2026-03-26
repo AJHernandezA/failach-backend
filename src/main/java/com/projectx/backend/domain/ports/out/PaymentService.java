@@ -3,8 +3,10 @@ package com.projectx.backend.domain.ports.out;
 import com.projectx.backend.domain.models.Order;
 import com.projectx.backend.domain.models.PaymentInitData;
 import com.projectx.backend.domain.models.PaymentLink;
+import com.projectx.backend.domain.models.TransactionVerification;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Puerto de salida para la integración con la pasarela de pagos (Wompi).
@@ -25,6 +27,12 @@ public interface PaymentService {
      * Calcula la firma de integridad para una referencia de pago.
      */
     String calculateIntegritySignature(String reference, long amountInCents, String currency);
+
+    /**
+     * Verifica una transacción directamente con la API de Wompi.
+     * Seguridad: no confiar ciegamente en el webhook, sino verificar server-side.
+     */
+    Optional<TransactionVerification> verifyTransaction(String transactionId);
 
     /**
      * Crea un link de pago en Wompi.

@@ -86,14 +86,15 @@ public class CreateOrderUseCaseImpl implements CreateOrderUseCase {
             }
 
             // F014: Validar que la ciudad está dentro de la cobertura del tenant
-            Tenant tenantForCity = tenantRepository.findById(tenantId)
-                    .orElseThrow(() -> new NotFoundException("Tenant no encontrado"));
-            if (tenantForCity.cities() != null && !tenantForCity.cities().isEmpty()) {
-                boolean cityInCoverage = tenantForCity.cities().stream()
-                        .anyMatch(c -> c.equalsIgnoreCase(req.city().trim()));
-                if (!cityInCoverage) {
-                    throw new BusinessRuleException("La ciudad seleccionada no está en cobertura");
-                }
+            // Por ahora solo acepta Bogotá y sus variantes
+            String normalizedCity = req.city().trim()
+                    .replaceAll("\\s+D\\.C\\.?$", "")
+                    .replaceAll("á", "a")
+                    .replaceAll("Á", "A")
+                    .toLowerCase()
+                    .trim();
+            if (!normalizedCity.equals("bogota")) {
+                throw new BusinessRuleException("Por ahora solo aceptamos envíos a Bogotá");
             }
         }
 

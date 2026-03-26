@@ -6,6 +6,7 @@ import com.google.inject.Inject;
 import com.projectx.backend.domain.models.Order;
 import com.projectx.backend.domain.models.PaymentInitData;
 import com.projectx.backend.domain.models.PaymentLink;
+import com.projectx.backend.domain.models.TransactionVerification;
 import com.projectx.backend.domain.ports.out.PaymentService;
 import com.projectx.backend.infra.config.AppConfig;
 import org.slf4j.Logger;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Implementación del servicio de pagos con Wompi.
@@ -194,6 +196,51 @@ public class WompiPaymentService implements PaymentService {
         } catch (Exception e) {
             log.error("Error de comunicación con Wompi al obtener link de pago {}", linkId, e);
             return null;
+        }
+    }
+
+    @Override
+    public Optional<TransactionVerification> verifyTransaction(String transactionId) {
+        try {
+            // Consultar directamente a la API de Wompi el estado real de la transacción
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiBaseUrl + "/transactions/" + transactionId))
+                    .header("Authorization", "Bearer " + privateKey)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 400) {
+                log.error("Error verificando transacción {}: status={}, body={}",
+                        transactionId, response.statusCode(), response.body());
+                return Optional.empty();
+            }
+
+            JsonNode data = objectMapper.readTree(response.body()).get("data");
+            if (data == null) {
+                log.error("Respuesta de Wompi sin campo 'data' para transacción {}", transactionId);
+                return Optional.empty();
+            }
+
+            String status = data.has("status") ? data.get("status").asText() : "";
+            String reference = data.has("reference") ? data.get("reference").asText() : "";
+            long amountInCents = data.has("amount_in_cents") ? data.get("amount_in_cents").asLong() : 0;
+            String currency = data.has("currency") ? data.get("currency").asText() : "";
+            String paymentMethodType = "";
+            if (data.has("payment_method") && data.get("payment_method").has("type")) {
+                paymentMethodType = data.get("payment_method").get("type").asText();
+            }
+
+            log.info("Transacción {} verificada server-side: status={}, ref={}, monto={}",
+                    transactionId, status, reference, amountInCents);
+
+            return Optional.of(new TransactionVerification(
+                    transactionId, status, reference, amountInCents, currency, paymentMethodType));
+
+        } catch (Exception e) {
+            log.error("Error de comunicación con Wompi al verificar transacción {}", transactionId, e);
+            return Optional.empty();
         }
     }
 

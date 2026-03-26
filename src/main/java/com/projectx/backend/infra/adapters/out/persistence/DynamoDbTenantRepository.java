@@ -1,6 +1,7 @@
 package com.projectx.backend.infra.adapters.out.persistence;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.projectx.backend.domain.models.*;
@@ -22,7 +23,8 @@ import java.util.*;
 public class DynamoDbTenantRepository implements TenantRepository {
 
     private static final Logger log = LoggerFactory.getLogger(DynamoDbTenantRepository.class);
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     private final DynamoDbClient dynamoDb;
     private final String tableName;

@@ -64,11 +64,12 @@ public class InfraModule extends AbstractModule {
         // F005: Order Repository
         bind(OrderRepository.class).to(InMemoryOrderRepository.class).in(Singleton.class);
 
-        // F006: Wompi Payment Service — Mock en desarrollo, real en producción
-        if (appConfig.isAuthMockEnabled()) {
-            bind(PaymentService.class).to(MockWompiPaymentService.class).in(Singleton.class);
-        } else {
+        // F006: Wompi Payment Service — Real si hay llaves configuradas, mock si no
+        String wompiKey = appConfig.getWompiPublicKey();
+        if (wompiKey != null && !wompiKey.isBlank()) {
             bind(PaymentService.class).to(WompiPaymentService.class).in(Singleton.class);
+        } else {
+            bind(PaymentService.class).to(MockWompiPaymentService.class).in(Singleton.class);
         }
 
         // F009: Email Service — LogEmailService en desarrollo, SesEmailService con SES
